@@ -105,15 +105,26 @@ JOIN outcomes o ON p.OutcomeID=o.OutcomeID
 GROUP BY d.DiagnosisName,o.OutcomeName
 ORDER BY d.DiagnosisName,o.OutcomeName;
 
+-- Rank of Treatment Costs
 
-SELECT * FROM Diagnoses;
-SELECT * FROM Outcomes;
-SELECT * FROM Patients;
-SELECT * FROM Labs;
+WITH DiagnosisCosts AS (
+    SELECT 
+        d.DiagnosisName, 
+        p.TreatmentCost,
+        AVG(p.TreatmentCost) OVER(PARTITION BY d.DiagnosisName) as AvgCostPerDiagnosis
+    FROM Patients p
+    JOIN Diagnoses d ON p.DiagnosisID = d.DiagnosisID
+)
+SELECT 
+    DiagnosisName,
+    TreatmentCost,
+    AvgCostPerDiagnosis,
+    RANK() OVER(ORDER BY AvgCostPerDiagnosis DESC) as CostRank
+FROM DiagnosisCosts;
 
+-- Cumulative Lab History
 
-
-
-
-
-
+SELECT p.PatientID, l.TestName, l.Result, 
+ROUND(AVG(Result) OVER(PARTITION BY PatientID, TestName ORDER BY AdmissionDate),2) as RunningAvgResult
+FROM Labs l
+JOIN Patients p ON l.PatientID = p.PatientID;
